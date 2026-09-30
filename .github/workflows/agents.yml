@@ -1,0 +1,102 @@
+name: Agents
+on:
+  schedule:
+    - cron: "5 4-17 * * *"    # tick: har ghanta 09:05-22:05 Pakistan
+    - cron: "10 16 * * *"     # daily report 21:10 Pakistan
+    - cron: "30 5 * * 0"      # weekly Sunday 10:30 Pakistan
+    - cron: "20 */6 * * *"    # monitor
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Kya chalana hai"
+        type: choice
+        options: [tick, daily, weekly, monitor, test-notify, board-check, rules-check, pause, resume, dry-run-off, dry-run-on, unpack]
+  issue_comment:
+    types: [created]
+
+jobs:
+  run:
+    if: github.event_name != 'issue_comment'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions: {contents: write, issues: write, pages: write}
+    concurrency: {group: agents-state, cancel-in-progress: false}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      STATE_KEY: ${{ secrets.STATE_KEY }}
+      PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+      PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+      PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
+      PINTEREST_REFRESH_TOKEN: ${{ secrets.PINTEREST_REFRESH_TOKEN }}
+      GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+      GA4_SERVICE_ACCOUNT_JSON: ${{ secrets.GA4_SERVICE_ACCOUNT_JSON }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+      NOTIFY_EMAIL_TO: ${{ secrets.NOTIFY_EMAIL_TO }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decide command
+        id: c
+        run: |
+          case "${{ github.event.schedule }}" in
+            "5 4-17 * * *") c=tick;; "10 16 * * *") c=daily;; "30 5 * * 0") c=weekly;; "20 */6 * * *") c=monitor;;
+            *) c="${{ inputs.command }}";;
+          esac
+          echo "cmd=$c" >> "$GITHUB_OUTPUT"
+      - name: Simple controls
+        if: contains('pause resume dry-run-on dry-run-off unpack', steps.c.outputs.cmd)
+        run: |
+          git config user.name agents; git config user.email agents@users.noreply.github.com
+          case "${{ steps.c.outputs.cmd }}" in
+            pause) date > PAUSE; git add PAUSE;;
+            resume) git rm -q --ignore-unmatch PAUSE;;
+            dry-run-on) sed -i 's/^dry_run: .*/dry_run: true/' config/settings.yaml; git add config/settings.yaml;;
+            dry-run-off) sed -i 's/^dry_run: .*/dry_run: false/' config/settings.yaml; git add config/settings.yaml;;
+            unpack)
+              unzip -oq pinterest-growth-agents.zip -d _x
+              rm -rf _x/pinterest-growth-agents/.github _x/pinterest-growth-agents/_paste_workflows_by_hand
+              cp -r _x/pinterest-growth-agents/. . && rm -rf _x pinterest-growth-agents.zip; git add -A;;
+          esac
+          git diff --cached --quiet || { git commit -qm "control: ${{ steps.c.outputs.cmd }}"; git push; }
+      - uses: actions/checkout@v4
+        if: "!contains('pause resume dry-run-on dry-run-off unpack', steps.c.outputs.cmd)"
+        continue-on-error: true
+        with: {ref: state, path: state}
+      - uses: actions/setup-python@v5
+        if: "!contains('pause resume dry-run-on dry-run-off unpack', steps.c.outputs.cmd)"
+        with: {python-version: "3.11", cache: pip}
+      - name: Run agents
+        if: "!contains('pause resume dry-run-on dry-run-off unpack', steps.c.outputs.cmd)"
+        run: |
+          pip install -q -r requirements.txt
+          mkdir -p state
+          python -m src.main "${{ steps.c.outputs.cmd }}"
+      - name: Save state and outputs
+        if: "always() && !contains('pause resume dry-run-on dry-run-off unpack', steps.c.outputs.cmd)"
+        run: bash scripts/save_state.sh
+
+  chat:
+    if: github.event_name == 'issue_comment' && github.actor == github.repository_owner && startsWith(github.event.comment.body, '/')
+    runs-on: ubuntu-latest
+    permissions: {contents: write, issues: write}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Handle command
+        env:
+          BODY: ${{ github.event.comment.body }}
+          N: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name agents; git config user.email agents@users.noreply.github.com
+          case "$BODY" in
+            /pause*)  date > PAUSE; git add PAUSE; git commit -qm "chat: pause"; git push; gh issue comment "$N" -b "PAUSED. /resume se dobara chalao.";;
+            /resume*) git rm -q --ignore-unmatch PAUSE; git commit -qm "chat: resume" || true; git push; gh issue comment "$N" -b "Resumed.";;
+            /status*) gh issue comment "$N" -b "$( [ -f PAUSE ] && echo PAUSED || echo running ) | $(grep -E '^dry_run|^  mode|^  daily_pins|^  daily_saves_own' config/settings.yaml | tr '\n' ' ')";;
+            *) gh issue comment "$N" -b "Commands: /pause /resume /status";;
+          esac
