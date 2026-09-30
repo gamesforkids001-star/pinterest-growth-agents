@@ -30,7 +30,7 @@ class _P(HTMLParser):
         s.text.append(d)
 
 class SiteReader:
-    def __init__(self, base, delay=2.0, session=None):
+    def __init__(self, base, delay=5.0, session=None):
         self.base, self.delay, self.s = base.rstrip("/"), delay, session or requests.Session()
         self.rp = urllib.robotparser.RobotFileParser()
         try:
@@ -40,8 +40,13 @@ class SiteReader:
         url = canonical(path if path.startswith("http") else self.base + path)
         if not self.rp.can_fetch(UA, url): return {"url": url, "ok": False, "error": "blocked by robots.txt"}
         time.sleep(self.delay)
-        try: r = self.s.get(url, headers={"User-Agent": UA}, timeout=30)
-        except Exception as e: return {"url": url, "ok": False, "error": type(e).__name__}
+        r = None
+        for attempt in range(4):
+            try: r = self.s.get(url, headers={"User-Agent": UA}, timeout=30)
+            except Exception as e: return {"url": url, "ok": False, "error": type(e).__name__}
+            if r.status_code not in (429, 503) or attempt == 3: break
+            ra = r.headers.get("Retry-After", "")
+            time.sleep(min(int(ra), 90) if ra.isdigit() else 20 * (attempt + 1))
         if r.status_code != 200: return {"url": url, "ok": False, "error": f"HTTP {r.status_code}"}
         p = _P(); p.feed(r.text)
         text = re.sub(r"\s+", " ", " ".join(p.text))
