@@ -1,0 +1,38 @@
+# Compliance rules. Ceilings settings se override nahi ho sakti.
+# NOTE: ceilings conservative starting values hain, verified Pinterest numbers nahi (docs/pinterest_rules_summary.md dekho).
+ceilings:
+  daily_pins: 10
+  daily_saves_own: 15
+  daily_follows: 10
+  daily_saves_others: 15
+  max_actions_per_day: 40
+min_gap_minutes_floor: 60
+similarity_limit: 0.80
+keyword_density_max: 0.06
+title_max: 100
+description_max: 500
+alt_text_max: 500
+keywords_min: 2
+keywords_max: 5
+allowed_domain: "easyfileonlinetools.blogspot.com"
+banned_words: ["guaranteed", "get rich", "click here now", "viral", "cracked", "hack your"]
+required_fields:
+  L: ["title", "description", "alt_text", "image", "link", "tool_slug", "keywords"]
+  I: ["title", "description", "alt_text", "image", "tool_slug", "keywords"]
+forbidden_actions: ["unfollow", "follow_back", "comment", "message", "create_board", "write_website"]
+auto_pause:
+  error_spike_count: 3
+risk:
+  warmup_days: 30
+  max_daily_increase_factor: 2
+rules_max_age_days: 35
+rules_urls:
+  - https://policy.pinterest.com/en/community-guidelines
+  - https://policy.pinterest.com/en/terms-of-service
+  - https://developers.pinterest.com/terms/
+  - https://policy.pinterest.com/en/developer-guidelines
+analytics:
+  drop_alert_pct: 50
+  drop_pause_pct: 75
+  min_baseline_impressions_per_day: 20
+  cautious_days: 7

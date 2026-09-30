@@ -1,0 +1,49 @@
+# ===== OWNER SETTINGS: GitHub mobile site mein edit karo (pencil icon) =====
+# Har value policies.yaml ki ceiling se neeche honi chahiye, warna safe value use hogi aur report mein bataya jayega.
+dry_run: true              # true = kuch publish nahi hota. Pehli dry-run reports dekh kar false karo.
+
+pinterest:
+  mode: "B"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
+  use_sandbox: false       # true = Pinterest sandbox API (testing)
+  daily_pins: 1            # shuru mein 1-3
+  post_times: ["10:00", "15:00", "20:00"]   # Asia/Karachi
+  timezone: "Asia/Karachi"
+  min_gap_minutes: 120
+  random_jitter_minutes: 20
+  active_hours: [9, 22]    # [start_hour, end_hour)
+  daily_saves_own: 0
+  boards:
+    main: ""               # Main Board ID (board-check ke baad bharo)
+    main_name: "Main Board"  # Mode B CSV ke liye board ka naam
+    tools: {}              # slug: board_id
+
+brand:
+  name: "Easy File Online Tools"
+  colors: ["#0F172A", "#1D4ED8", "#B45309", "#047857", "#BE123C"]
+
+pins:
+  link_share: 0.7
+  max_link_pins_per_tool_per_week: 2
+  idea_formats: ["tips", "cheatsheet", "steps"]
+
+curator:
+  enabled: false
+  daily_follows: 0
+  daily_saves_others: 0
+  topics: ["productivity", "pdf tips", "design", "students", "office work"]
+
+site:
+  base_url: "https://easyfileonlinetools.blogspot.com"
+  read_only: true          # fixed, badla nahi ja sakta
+
+google:
+  enabled: true            # GA4 read-only (dashboard). false = sirf Pinterest numbers
+
+reports:
+  daily_time: "21:00"
+  weekly_day: "sunday"
+  channels: ["github_issues", "email", "ntfy", "telegram"]   # fallback order
+
+limits:
+  max_actions_per_day: 10
+  kill_switch: false       # true = sab ruk jata hai
