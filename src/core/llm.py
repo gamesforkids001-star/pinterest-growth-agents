@@ -18,16 +18,18 @@ def _groq(prompt, key):
     return r.json()["choices"][0]["message"]["content"]
 
 def generate(prompt, retries=3, sleep=time.sleep):
-    gk, qk = os.getenv("GEMINI_API_KEY"), os.getenv("GROQ_API_KEY")
-    attempts = [(lambda m=m: _gemini(prompt, m, gk)) for m in GEMINI_MODELS] if gk else []
-    if qk: attempts.append(lambda: _groq(prompt, qk))
+    gk, qk = (os.getenv("GEMINI_API_KEY") or "").strip(), (os.getenv("GROQ_API_KEY") or "").strip()
+    attempts = [(m, lambda m=m: _gemini(prompt, m, gk)) for m in GEMINI_MODELS] if gk else []
+    if qk: attempts.append((GROQ_MODEL, lambda: _groq(prompt, qk)))
     if not attempts: raise LLMUnavailable("No LLM key set")
     last = None
-    for fn in attempts:
+    for name, fn in attempts:
         for i in range(retries):
             try: return fn()
             except Exception as e:
                 last = e
+                resp = getattr(e, "response", None)
+                print(f"[LLM] {name} try {i + 1} failed: {type(e).__name__} {getattr(resp, 'status_code', '')} {(getattr(resp, 'text', '') or str(e))[:200]}")
                 if getattr(getattr(e, "response", None), "status_code", None) in (400, 401, 403, 404): break   # model gone / bad key: try next model, no retries
                 sleep(2 ** i)
     raise LLMUnavailable(f"All LLM attempts failed: {type(last).__name__}")
