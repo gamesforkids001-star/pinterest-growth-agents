@@ -13,13 +13,41 @@ def derive_keywords(name, text, n=12):
     base = [name.lower()] + [w for w, _ in sorted(freq.items(), key=lambda x: -x[1])]
     return list(dict.fromkeys(base))[:n]
 
+def _feed_slugs(reader):
+    """ONE request: Blogger page feed lists every published page (slug -> url/title). Avoids 429 rate limits. Empty dict if unavailable."""
+    sess, base = getattr(reader, "s", None), getattr(reader, "base", None)
+    if not sess or not base: return {}
+    url = base + "/feeds/pages/default?alt=json&max-results=500"
+    try:
+        rp = getattr(reader, "rp", None)
+        if rp is not None and not rp.can_fetch("EasyFileToolsPinBot/1.0", url): return {}
+        r = sess.get(url, headers={"User-Agent": "EasyFileToolsPinBot/1.0 (read-only; owner site)"}, timeout=30)
+        if r.status_code != 200: return {}
+        entries = r.json().get("feed", {}).get("entry", [])
+    except Exception: return {}
+    out = {}
+    for e in entries:
+        href = next((l.get("href", "") for l in e.get("link", []) if l.get("rel") == "alternate"), "")
+        if href: out[re.sub(r"\.html$", "", href.rstrip("/").rsplit("/", 1)[-1])] = {"url": href.split("?")[0].replace("http://", "https://"), "title": (e.get("title") or {}).get("$t", "")}
+    return out
+
 def build(root, base_url, reader=None, use_llm=True):
     root = Path(root)
     seed = json.loads((root / "data/tools_seed.json").read_text(encoding="utf-8"))["tools"]
     reader = reader or SiteReader(base_url)
     tools, problems = [], []
+    feed, blocked = _feed_slugs(reader), 0
     for name, slug in seed:
-        page = reader.fetch(f"/p/{slug}.html")
+        known = feed.get(slug)
+        partial = {"url": (known or {}).get("url", ""), "ok": True, "title": (known or {}).get("title", ""), "description": "", "headings": [], "text": "", "js_only": False}
+        if feed and not known:
+            page = {"url": f"{base_url.rstrip('/')}/p/{slug}.html", "ok": False, "error": "HTTP 404 (site ke page-feed mein ye slug nahi hai)"}
+        elif known and blocked >= 3:
+            page = partial
+        else:
+            page = reader.fetch(f"/p/{slug}.html")
+            if known and not page["ok"] and page.get("error") == "HTTP 429": blocked += 1; page = partial
+            elif page["ok"]: blocked = 0
         e = {"name": name, "slug": slug, "url": page["url"], "verified": page["ok"]}
         if not page["ok"]:
             problems.append(f"{name}: {page['url']} -> {page['error']} (slug galat ho sakta hai, tools_seed.json mein theek karo)")
