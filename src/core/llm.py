@@ -1,6 +1,6 @@
 """Gemini (primary) -> Groq (fallback), retries + backoff. Free tiers only. Model names are configurable via env."""
 import os, time, requests
-GEMINI_MODELS = os.getenv("GEMINI_MODELS", "gemini-2.5-flash,gemini-2.5-flash-lite").split(",")
+GEMINI_MODELS = os.getenv("GEMINI_MODELS", "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 class LLMUnavailable(Exception): pass
@@ -27,5 +27,7 @@ def generate(prompt, retries=3, sleep=time.sleep):
         for i in range(retries):
             try: return fn()
             except Exception as e:
-                last = e; sleep(2 ** i)
+                last = e
+                if getattr(getattr(e, "response", None), "status_code", None) in (400, 401, 403, 404): break   # model gone / bad key: try next model, no retries
+                sleep(2 ** i)
     raise LLMUnavailable(f"All LLM attempts failed: {type(last).__name__}")
