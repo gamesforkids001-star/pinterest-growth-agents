@@ -17,8 +17,13 @@ Return ONLY JSON: {{"title": "<=90 chars", "description": "<=400 chars natural s
 Never use: guaranteed, viral, get rich, click here now. English only.{(' Fix these problems from last try: ' + '; '.join(errs)) if errs else ''}"""
 
 def _parse(txt):
-    m = re.search(r"\{.*\}", txt, re.S)
-    return json.loads(m.group(0)) if m else None
+    i = txt.find("{")
+    if i < 0: return None
+    try: obj, _ = json.JSONDecoder().raw_decode(txt[i:])
+    except Exception:
+        m = re.search(r"\{.*\}", txt, re.S)
+        obj = json.loads(m.group(0)) if m else None
+    return obj if isinstance(obj, dict) else None
 
 def _fallback(plan):
     t = plan["tool"]; name = t["name"]; d = (t.get("what_it_does") or "").strip()
@@ -30,6 +35,11 @@ def _fallback(plan):
     return {"title": lead[:95], "description": d, "alt_text": f"Pin about {name}: {d[:120]}", "benefit_line": d[:70], "bullets": heads[:4]}
 
 def create(plan, settings, pol, db, rng, out_dir, base_url=None):
+    pin, errs = _create(plan, settings, pol, db, rng, out_dir, base_url)
+    if not pin: print(f"[CREATOR] pin failed for {plan['tool']['slug']}: {errs}")
+    return pin, errs
+
+def _create(plan, settings, pol, db, rng, out_dir, base_url=None):
     t, cls = plan["tool"], plan["cls"]
     recent = db.recent_pins(200)
     data, errs_last = None, None
@@ -37,8 +47,11 @@ def create(plan, settings, pol, db, rng, out_dir, base_url=None):
     for attempt in range(3):
         cand = None
         if have_llm:
-            try: cand = _parse(llm.generate(_prompt(plan, errs_last)))
-            except Exception: cand = None
+            try:
+                raw = llm.generate(_prompt(plan, errs_last)); cand = _parse(raw)
+                if cand is None: print(f"[CREATOR] AI reply was not JSON: {str(raw)[:150]!r}")
+            except Exception as e:
+                print(f"[CREATOR] AI call/parse failed: {type(e).__name__} {str(e)[:150]}"); cand = None
         if cand is None:
             cand = _fallback(plan)
             if cand is None: return None, ["no LLM output and no page facts for fallback"]
