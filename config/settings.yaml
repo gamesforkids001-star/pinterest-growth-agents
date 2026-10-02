@@ -1,4 +1,4 @@
-# ===== OWNER SETTINGS: GitHub mobile site mein edit karo (pencil icon) =====
+ki# ===== OWNER SETTINGS: GitHub mobile site mein edit karo (pencil icon) =====
 # Har value policies.yaml ki ceiling se neeche honi chahiye, warna safe value use hogi aur report mein bataya jayega.
 dry_run: true              # true = kuch publish nahi hota. Pehli dry-run reports dekh kar false karo.
 
@@ -14,7 +14,7 @@ pinterest:
   daily_saves_own: 0
   boards:
     main: ""               # Main Board ID (board-check ke baad bharo)
-    main_name: "Main Board"  # Mode B CSV ke liye board ka naam
+    main_name: "Easy file online tools"  # Mode B CSV ke liye board ka naam
     tools: {}              # slug: board_id
 
 brand:
