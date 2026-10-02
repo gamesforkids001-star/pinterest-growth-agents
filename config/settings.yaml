@@ -1,6 +1,6 @@
 ki# ===== OWNER SETTINGS: GitHub mobile site mein edit karo (pencil icon) =====
 # Har value policies.yaml ki ceiling se neeche honi chahiye, warna safe value use hogi aur report mein bataya jayega.
-dry_run: true              # true = kuch publish nahi hota. Pehli dry-run reports dekh kar false karo.
+dry_run: false
 
 pinterest:
   mode: "B"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
