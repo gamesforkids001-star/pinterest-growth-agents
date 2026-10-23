@@ -1,9 +1,9 @@
-ki# ===== OWNER SETTINGS: GitHub mobile site mein edit karo (pencil icon) =====
+# ===== OWNER SETTINGS: GitHub mobile site mein edit karo (pencil icon) =====
 # Har value policies.yaml ki ceiling se neeche honi chahiye, warna safe value use hogi aur report mein bataya jayega.
 dry_run: false
 
 pinterest:
-  mode: "B"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
+  mode: "A"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
   use_sandbox: false       # true = Pinterest sandbox API (testing)
   daily_pins: 1            # shuru mein 1-3
   post_times: ["10:00", "15:00", "20:00"]   # Asia/Karachi
@@ -15,7 +15,29 @@ pinterest:
   boards:
     main: ""               # Main Board ID (board-check ke baad bharo)
     main_name: "Easy file online tools"  # Mode B CSV ke liye board ka naam
-    tools: {}              # slug: board_id
+    tools:
+      word-counter: "1109504126890990172"
+      case-converter: "1109504126890990175"
+      password-generator: "1109504126890990178"
+      qr-code-generator: "1109504126890990184"
+      age-calculator: "1109504126890990187"
+      bmi-calculator: "1109504126890990194"
+      unit-converter: "1109504126890990197"
+      json-formatter: "1109504126890990203"
+      image-compressor: "1109504126890990204"
+      color-picker: "1109504126890990210"
+      merge-pdf: "1109504126890990213"
+      split-pdf: "1109504126890990215"
+      rotate-pdf: "1109504126890990217"
+      jpg-to-pdf: "1109504126890990220"
+      image-resizer: "1109504126890990222"
+      image-converter: "1109504126890990225"
+      image-crop: "1109504126890990231"
+      remove-duplicate-lines: "1109504126890990234"
+      sort-text-lines: "1109504126890990238"
+      random-number-generator: "1109504126890990245"
+      file-info: "1109504126890990250"
+      text-cleaner: "1109504126890990255"
 
 brand:
   name: "Easy File Online Tools"
