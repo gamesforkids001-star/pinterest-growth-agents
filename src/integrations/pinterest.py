@@ -85,4 +85,5 @@ def map_boards(boards, tools):
         if b: mapping[t["slug"]] = b["id"]
         else: miss.append(t["name"])
     used = set(mapping.values()); rest = [b for b in boards if b["id"] not in used]
-    return mapping, miss, [b["name"] for b in rest], [b for b in rest if "main" in b["name"].lower()]
+    main = [b for b in rest if "main" in b["name"].lower()]
+    return mapping, miss, [b["name"] for b in rest], (main or rest)
