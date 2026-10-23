@@ -1,0 +1,38 @@
+name: pinterest-token
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: "Pinterest code"
+        required: true
+
+jobs:
+  make-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get token and save secrets
+        env:
+          APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+          APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          CODE: ${{ github.event.inputs.code }}
+        run: |
+          RESP=$(curl -s -X POST https://api.pinterest.com/v5/oauth/token \
+            -u "$APP_ID:$APP_SECRET" \
+            -d "grant_type=authorization_code" \
+            -d "code=$CODE" \
+            -d "redirect_uri=http://localhost:8080/" \
+            -d "continuous_refresh=true")
+          ACCESS=$(echo "$RESP" | jq -r '.access_token // empty')
+          REFRESH=$(echo "$RESP" | jq -r '.refresh_token // empty')
+          if [ -z "$ACCESS" ]; then
+            echo "Token nahi bana. Pinterest ka jawab:"
+            echo "$RESP" | jq -r '.message // .'
+            exit 1
+          fi
+          gh secret set PINTEREST_TOKEN --repo "${{ github.repository }}" --body "$ACCESS"
+          if [ -n "$REFRESH" ]; then
+            gh secret set PINTEREST_REFRESH_TOKEN --repo "${{ github.repository }}" --body "$REFRESH"
+          fi
+          echo "Token save ho gaya."
