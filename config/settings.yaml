@@ -3,7 +3,7 @@
 dry_run: false
 
 pinterest:
-  mode: "A"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
+  mode: "B"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
   use_sandbox: false       # true = Pinterest sandbox API (testing)
   daily_pins: 1            # shuru mein 1-3
   post_times: ["10:00", "15:00", "20:00"]   # Asia/Karachi
