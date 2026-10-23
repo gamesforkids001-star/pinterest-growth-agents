@@ -13,7 +13,7 @@ pinterest:
   active_hours: [9, 22]    # [start_hour, end_hour)
   daily_saves_own: 0
   boards:
-    main: ""               # Main Board ID (board-check ke baad bharo)
+    main: "1109504126890990168"   # Main Board ID (Easy file online tools)
     main_name: "Easy file online tools"  # Mode B CSV ke liye board ka naam
     tools:
       word-counter: "1109504126890990172"
