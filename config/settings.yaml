@@ -5,13 +5,20 @@ dry_run: false
 pinterest:
   mode: "A"               # "B" = CSV package (manual upload, safe start) | "A" = API auto-publish (approved app chahiye)
   use_sandbox: false       # true = Pinterest sandbox API (testing)
-  daily_pins: 1            # shuru mein 1-3
+  daily_pins: 2            # ramp ON hone par ye automatic badalta hai (neeche ramp dekhein)
   post_times: ["10:00", "15:00", "20:00"]   # Asia/Karachi
   timezone: "Asia/Karachi"
-  min_gap_minutes: 120
+  min_gap_minutes: 60      # kam se kam gap; policies.yaml ka floor isse upar ho to wahi use hoga
   random_jitter_minutes: 20
   active_hours: [9, 22]    # [start_hour, end_hour)
-  daily_saves_own: 0
+  daily_saves_own: 2       # ramp ON hone par ye automatic daily_pins ke barabar hota hai
+  ramp:                    # auto barhta hua pins/din: har step_days baad +step_pins
+    enabled: true
+    start_date: "2026-11-05"
+    start_pins: 2
+    step_days: 15
+    step_pins: 1
+    max_pins: 10
   boards:
     main: "1109504126890990168"   # Main Board ID (Easy file online tools)
     main_name: "Easy file online tools"  # Mode B CSV ke liye board ka naam
