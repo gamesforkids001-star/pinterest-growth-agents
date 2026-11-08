@@ -44,7 +44,7 @@ class DB:
         return out
     def pending_saves(self, limit=20):
         rows = self.c.execute("""SELECT * FROM pins WHERE status='published' AND pinterest_id!='' AND id NOT IN (SELECT pin_id FROM saves WHERE ok=1)
-                                 ORDER BY id""").fetchall()
+                                 ORDER BY id DESC""").fetchall()   # newest pin first, old backlog afterwards
         out = []
         for r in rows:
             d = dict(r)

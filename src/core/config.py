@@ -46,7 +46,8 @@ def validate(settings, policies):
     rn = _ramp_pins(p, notes)
     if rn is not None:
         p["daily_pins"] = rn
-        p["daily_saves_own"] = rn
+        extra = p.get("backlog_saves_extra", 0)
+        p["daily_saves_own"] = rn + (extra if isinstance(extra, int) and not isinstance(extra, bool) and extra > 0 else 0)   # extra saves/day to clear the old pin backlog
     p["daily_pins"] = _clamp("pinterest.daily_pins", p.get("daily_pins"), 0, c["daily_pins"], 1, notes)
     p["daily_saves_own"] = _clamp("pinterest.daily_saves_own", p.get("daily_saves_own"), 0, c["daily_saves_own"], 0, notes)
     floor = policies["min_gap_minutes_floor"]
@@ -75,7 +76,7 @@ def validate(settings, policies):
             notes.append(f"ramp wanted {n} pins but only {fit} fit in active_hours with gap {gap} min; {fit} used")
             n = fit
         p["daily_pins"] = n
-        p["daily_saves_own"] = min(p["daily_saves_own"], n)
+        p["daily_saves_own"] = min(p["daily_saves_own"], n + (p.get("backlog_saves_extra") if isinstance(p.get("backlog_saves_extra"), int) and p.get("backlog_saves_extra") > 0 else 0))
         if n > 0:
             step = max(gap, (b - a - p["random_jitter_minutes"]) // n)
             p["post_times"] = ["%02d:%02d" % divmod(a + i * step, 60) for i in range(n) if a + i * step < b]

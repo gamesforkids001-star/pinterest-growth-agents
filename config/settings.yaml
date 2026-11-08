@@ -12,6 +12,7 @@ pinterest:
   random_jitter_minutes: 20
   active_hours: [9, 22]    # [start_hour, end_hour)
   daily_saves_own: 2       # ramp ON hone par ye automatic daily_pins ke barabar hota hai
+  backlog_saves_extra: 3     # ramp ON: roz ki saves = pins/din + ye extra (purani pins tool boards me jaldi jane ke liye)
   ramp:                    # auto barhta hua pins/din: har step_days baad +step_pins
     enabled: true
     start_date: "2026-11-05"
