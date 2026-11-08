@@ -44,8 +44,15 @@ class DB:
         return out
     def pending_saves(self, limit=20):
         rows = self.c.execute("""SELECT * FROM pins WHERE status='published' AND pinterest_id!='' AND id NOT IN (SELECT pin_id FROM saves WHERE ok=1)
-                                 ORDER BY id LIMIT ?""", (limit,)).fetchall()
-        return [dict(r) for r in rows]
+                                 ORDER BY id""").fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            try: b = json.loads(d.get("meta") or "{}").get("board", "main")
+            except Exception: b = "main"
+            if b == "main": out.append(d)
+            if len(out) >= limit: break
+        return out
     def add_save(self, pin_id, slug, board, method, ok):
         self.c.execute("INSERT INTO saves(ts,pin_id,tool_slug,board_id,method,ok) VALUES(?,?,?,?,?,?)", (self.now(), pin_id, slug, board, method, int(ok))); self.c.commit()
     # alerts / tasks

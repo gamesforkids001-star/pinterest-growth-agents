@@ -65,7 +65,7 @@ def api_error(root, s, pol, db, e, what):
     else:
         db.add_alert(f"Pinterest API error {e.status} ({what})", f"Cause: {e}\nAbhi is run mein action ruk gaya, agli run mein dobara koshish hogi. Agar {limit} baar hua to auto-pause.")
 
-def publish_one(root, s, pol, db, tools, rng, board_id=None, tool=None, cls=None):
+def publish_one(root, s, pol, db, tools, rng, board_id=None, tool=None, cls=None, log_kind="publish"):
     """Creates + publishes one pin (Main Board by default). Returns True on success."""
     plan = strategist.plan_for(tool, cls, s, db, rng) if tool else strategist.pick(tools, s, db, rng)
     if not plan:
@@ -90,7 +90,7 @@ def publish_one(root, s, pol, db, tools, rng, board_id=None, tool=None, cls=None
         api_error(root, s, pol, db, e, "publish"); return False
     healing.clear_problem(db, "api403"); healing.clear_problem(db, "api429")
     db.add_pin(pin["cls"], pin["tool_slug"], pin["title"], pin["description"], "published", str(res.get("id", "")), meta)
-    db.log_action("publish", True, "published", pin["tool_slug"], str(res.get("id", ""))); return True
+    db.log_action(log_kind, True, "published", pin["tool_slug"], str(res.get("id", ""))); return True
 
 def build_plan(s, pol, db, mult):
     day = db.today(); rng = random.Random(f"{day}:{s['pinterest']['daily_pins']}")
@@ -123,11 +123,15 @@ def tick(root, rng=None, now_min=None):
             if errs: db.log_action("publish", False, "; ".join(errs))
             elif not gap_ok: res.append("publish deferred (min gap)")
             else: res.append("published" if publish_one(root, s, pol, db, tools, rng) else "publish failed")
-        # 2) save own pins into their tool board
+        # 2) save own pins into their tool board (right after publishing + catch-up for any pin still waiting)
         if not s["dry_run"] and not config.kill_switch_on(s, root):
-            sdone = db.count_actions_today("save_own")
-            if s["pinterest"]["daily_saves_own"] and scheduler.is_due(plan["saves"], sdone, nowm) and not compliance.check_action("save_own", s, pol, db.count_actions_today(), sdone, hour):
-                res.append(do_own_save(root, s, pol, db, tools, rng))
+            tries = 0
+            while s["pinterest"]["daily_saves_own"] and tries < 3:
+                tries += 1
+                sdone = db.count_actions_today("save_own")
+                if compliance.check_action("save_own", s, pol, db.count_actions_today(), sdone, hour): break
+                r = do_own_save(root, s, pol, db, tools, rng); res.append(r)
+                if r not in ("saved", "fresh pin on tool board"): break
             # 3) curator saves of others
             odone = db.count_actions_today("save_other")
             if s["curator"]["enabled"] and scheduler.is_due(plan["others"], odone, nowm) and db.kv_get("curator_api", True) and not compliance.check_action("save_other", s, pol, db.count_actions_today(), odone, hour):
@@ -151,9 +155,14 @@ def do_own_save(root, s, pol, db, tools, rng):
         tool = next((t for t in tools if t["slug"] == pin["tool_slug"]), None)
         if not tool: return "tool missing"
         board = manager.board_for(s, pin["tool_slug"])
-        if publish_one(root, s, pol, db, tools, rng, board_id=board, tool=tool, cls=pin["cls"]):
-            db.add_save(pin["id"], pin["tool_slug"], board, "fresh", True); db.log_action("save_own", True, "fresh pin", pin["tool_slug"], str(pin["id"])); return "fresh pin on tool board"
-        return "save failed"
+        for cls in dict.fromkeys([pin["cls"], "I" if pin["cls"] == "L" else "L"]):   # try own class, then the other class (different text)
+            if publish_one(root, s, pol, db, tools, rng, board_id=board, tool=tool, cls=cls, log_kind="save_own_pin"):
+                db.add_save(pin["id"], pin["tool_slug"], board, "fresh", True); db.log_action("save_own", True, "fresh pin", pin["tool_slug"], str(pin["id"])); return "fresh pin on tool board"
+        # could not make a fresh pin (e.g. text too similar): hand it to the owner as a manual task, once, instead of failing silently forever
+        n = manager.manual_save_tasks(db, s, [pin])
+        db.add_save(pin["id"], pin["tool_slug"], board, "manual-task", True)
+        db.add_alert("Pin tool board mein auto-save nahi ho saki", f"Pin '{pin['title'][:50]}' ({pin['tool_slug']}) ko tool board mein auto save/nayi pin se nahi bana saka. Aaj ke tasks me isko khud save karne ka task daal diya hai ({n}).")
+        return "save failed -> manual task"
     except PinterestError as e:
         api_error(root, s, pol, db, e, "save_own"); return "save error"
 
